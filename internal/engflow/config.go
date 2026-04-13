@@ -10,6 +10,7 @@ import (
 type runConfig struct {
 	Feature          string
 	SpecPath         string
+	CatalogPath      string
 	RequirementsPath string
 	DesignPath       string
 	ArchitecturePath string
@@ -24,6 +25,7 @@ func defaultRunConfig() runConfig {
 	cfg := runConfig{
 		Feature:          "default",
 		SpecPath:         "spec.md",
+		CatalogPath:      "catalog.yml",
 		RequirementsPath: "requirements.yml",
 		DesignPath:       "design.yml",
 		ArchitecturePath: "architecture.yml",
@@ -32,7 +34,7 @@ func defaultRunConfig() runConfig {
 		RegenCmd:         "",
 		TestCmd:          "",
 	}
-	cfg.WatchPaths = []string{cfg.RequirementsPath, cfg.DesignPath, cfg.ArchitecturePath, cfg.ArchitectureAI}
+	cfg.WatchPaths = []string{cfg.CatalogPath, cfg.RequirementsPath, cfg.DesignPath, cfg.ArchitecturePath, cfg.ArchitectureAI}
 	return cfg
 }
 
@@ -70,6 +72,8 @@ func loadRunConfig(path string) (runConfig, error) {
 			cfg.Feature = value
 		case "spec", "spec_path", "paths.spec":
 			cfg.SpecPath = value
+		case "catalog", "catalog_path", "paths.catalog":
+			cfg.CatalogPath = value
 		case "requirements", "requirements_path", "paths.requirements":
 			cfg.RequirementsPath = value
 		case "design", "design_path", "paths.design":
@@ -91,13 +95,14 @@ func loadRunConfig(path string) (runConfig, error) {
 
 	cfg.Feature = firstNonEmpty(cfg.Feature, "default")
 	cfg.SpecPath = firstNonEmpty(cfg.SpecPath, "spec.md")
+	cfg.CatalogPath = firstNonEmpty(cfg.CatalogPath, "catalog.yml")
 	cfg.RequirementsPath = firstNonEmpty(cfg.RequirementsPath, "requirements.yml")
 	cfg.DesignPath = firstNonEmpty(cfg.DesignPath, "design.yml")
 	cfg.ArchitecturePath = firstNonEmpty(cfg.ArchitecturePath, "architecture.yml")
 	cfg.ArchitectureAI = firstNonEmpty(cfg.ArchitectureAI, "ARCHITECTURE.ai.json")
 	cfg.RepoRoot = firstNonEmpty(cfg.RepoRoot, ".")
 	if len(cfg.WatchPaths) == 0 {
-		cfg.WatchPaths = []string{cfg.RequirementsPath, cfg.DesignPath, cfg.ArchitecturePath, cfg.ArchitectureAI}
+		cfg.WatchPaths = []string{cfg.CatalogPath, cfg.RequirementsPath, cfg.DesignPath, cfg.ArchitecturePath, cfg.ArchitectureAI}
 	}
 
 	return cfg, nil

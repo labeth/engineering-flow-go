@@ -112,6 +112,19 @@ func uniqueStrings(items []string) []string {
 	return out
 }
 
+func containsString(items []string, target string) bool {
+	target = strings.TrimSpace(target)
+	if target == "" {
+		return false
+	}
+	for _, it := range items {
+		if strings.TrimSpace(it) == target {
+			return true
+		}
+	}
+	return false
+}
+
 func parseRequirementIDs(text string) []string {
 	ids := reqIDPattern.FindAllString(strings.ToUpper(text), -1)
 	return uniqueStrings(ids)

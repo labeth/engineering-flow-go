@@ -38,14 +38,16 @@ Example:
 feature: engflow-mvp
 paths:
   spec: spec.md
+  catalog: catalog.yml
   requirements: requirements.yml
   design: design.yml
   architecture: architecture.yml
   architecture_ai: ARCHITECTURE.ai.json
 commands:
+  regen: engdoc --model architecture.yml --requirements requirements.yml --design design.yml --ai-json-out ARCHITECTURE.ai.json
   test: go test ./...
 verify:
-  watch: requirements.yml,design.yml,architecture.yml,ARCHITECTURE.ai.json
+  watch: catalog.yml,requirements.yml,design.yml,architecture.yml,ARCHITECTURE.ai.json
 ```
 
 ## Commands
@@ -99,7 +101,7 @@ How engflow extends Spec Kit:
 - `engflow init` runs `specify init` by default.
 - engflow writes `.specify/templates/overrides/spec-template.md`.
 - The override enforces `REQ-*` IDs and replaces default Spec Kit `FR-*` requirement ID usage in this flow.
-- Canonical requirements are authored in `requirements.yml` (single source of truth).
+- Canonical engineering inputs are authored in `catalog.yml`, `requirements.yml`, `design.yml`, and `architecture.yml`.
 
 This is currently an integration package/extension, not a released upstream Spec Kit plugin.
 
@@ -116,6 +118,15 @@ It runs `verify`, `drift`, and `status` in sequence.
 Enforced behavior:
 - `verify`/`gate` require engineering-model regeneration to be configured (`commands.regen` or `ENGMODEL_GENERATE_CMD`).
 - `verify`/`gate` fail if `ARCHITECTURE.ai.json` is not present after regeneration.
+- `init` writes `.engflow/state/scaffold-baseline.json` with canonical model hashes.
+- `verify`/`gate` fail when implementation files changed since scaffold baseline but canonical model files (`catalog.yml`, `requirements.yml`, `design.yml`, `architecture.yml`) remain unchanged.
+
+## Architecture Root Of Trust
+
+- `engdoc` (invoked via `.engflow/config.yml -> commands.regen`) is the only trusted producer of `ARCHITECTURE.ai.json`.
+- `ARCHITECTURE.ai.json` is generated output and must not be edited by hand.
+- After changes to `catalog.yml`, `requirements.yml`, `design.yml`, or `architecture.yml`, run regeneration before architecture-dependent planning/implementation.
+- If regeneration fails, treat architecture context as untrusted until generation succeeds.
 
 GitHub Actions gate is defined in:
 
@@ -126,12 +137,13 @@ GitHub Actions gate is defined in:
 Native command (recommended):
 
 ```bash
-engflow init --project-dir /path/to/new-project --feature initial-feature --regen-cmd "make engmodel-generate"
+engflow init --project-dir /path/to/new-project --feature initial-feature
 ```
 
 This creates:
 
 - `spec.md`
+- `catalog.yml`
 - `requirements.yml`
 - `design.yml`
 - `architecture.yml`
@@ -143,8 +155,13 @@ This creates:
 - `.opencode/command/engflow.{status,verify,drift,gate,trace-query}.md`
 - `.opencode/command/engmod.{generate,req-text,paths}.md`
 
-Note:
-- `ARCHITECTURE.ai.json` is treated as generated output and is not scaffolded.
+By default, `.engflow/config.yml` sets `commands.regen` to:
+
+```bash
+engdoc --model architecture.yml --requirements requirements.yml --design design.yml --ai-json-out ARCHITECTURE.ai.json
+```
+
+so init can generate `ARCHITECTURE.ai.json` immediately.
 
 Default behavior includes Spec Kit init and requires `specify` installed.
 If you need to scaffold without Spec Kit:

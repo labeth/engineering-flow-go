@@ -1,27 +1,31 @@
 package engflow
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type verifyReport struct {
-	Feature       string   `json:"feature"`
-	GeneratedAt   string   `json:"generated_at"`
-	RegenCmd      string   `json:"regen_cmd,omitempty"`
-	TestCmd       string   `json:"test_cmd,omitempty"`
-	ArchitectureAI string  `json:"architecture_ai,omitempty"`
-	RegenChanged  []string `json:"regen_changed,omitempty"`
-	RegenSuccess  bool     `json:"regen_success"`
-	ArchitectureAIOk bool   `json:"architecture_ai_ok"`
-	TestSuccess   bool     `json:"test_success"`
-	Status        string   `json:"status"`
-	NextAction    string   `json:"next_action"`
-	OutputSnippet string   `json:"output_snippet,omitempty"`
+	Feature               string   `json:"feature"`
+	GeneratedAt           string   `json:"generated_at"`
+	RegenCmd              string   `json:"regen_cmd,omitempty"`
+	TestCmd               string   `json:"test_cmd,omitempty"`
+	ArchitectureAI        string   `json:"architecture_ai,omitempty"`
+	RegenChanged          []string `json:"regen_changed,omitempty"`
+	RegenSuccess          bool     `json:"regen_success"`
+	ArchitectureAIOk      bool     `json:"architecture_ai_ok"`
+	TestSuccess           bool     `json:"test_success"`
+	CanonicalChanged      bool     `json:"canonical_changed"`
+	ImplementationChanged []string `json:"implementation_changed,omitempty"`
+	Status                string   `json:"status"`
+	NextAction            string   `json:"next_action"`
+	OutputSnippet         string   `json:"output_snippet,omitempty"`
 }
 
 func runVerify(args []string, out, errOut io.Writer) int {
@@ -64,14 +68,15 @@ func runVerify(args []string, out, errOut io.Writer) int {
 	}
 
 	report := verifyReport{
-		Feature:      safeFeatureName(*feature),
-		GeneratedAt:  nowRFC3339(),
-		RegenCmd:     resolvedRegenCmd,
-		TestCmd:      strings.TrimSpace(*testCmd),
-		ArchitectureAI: archAIPath,
-		RegenSuccess: false,
+		Feature:          safeFeatureName(*feature),
+		GeneratedAt:      nowRFC3339(),
+		RegenCmd:         resolvedRegenCmd,
+		TestCmd:          strings.TrimSpace(*testCmd),
+		ArchitectureAI:   archAIPath,
+		RegenSuccess:     false,
 		ArchitectureAIOk: false,
-		TestSuccess:  true,
+		TestSuccess:      true,
+		CanonicalChanged: true,
 	}
 	combinedOutput := make([]string, 0, 2)
 
@@ -107,6 +112,29 @@ func runVerify(args []string, out, errOut io.Writer) int {
 	if len(combinedOutput) > 0 {
 		report.OutputSnippet = strings.Join(combinedOutput, "\n\n")
 	}
+	baseline, baselineErr := loadScaffoldBaseline(cfg.RepoRoot)
+	if baselineErr == nil {
+		currentCanonical, err := snapshotCanonicalHashes(cfg.RepoRoot, canonicalInputPaths(cfg))
+		if err != nil {
+			fmt.Fprintf(errOut, "verify: snapshot canonical inputs: %v\n", err)
+			return 1
+		}
+		report.CanonicalChanged = canonicalHashesChanged(baseline.CanonicalHashes, currentCanonical)
+		if !report.CanonicalChanged {
+			since, err := time.Parse(time.RFC3339, baseline.CreatedAt)
+			if err == nil {
+				changedImpl, err := collectImplementationFilesChangedSince(cfg.RepoRoot, since, canonicalInputPaths(cfg))
+				if err != nil {
+					fmt.Fprintf(errOut, "verify: inspect implementation changes: %v\n", err)
+					return 1
+				}
+				report.ImplementationChanged = changedImpl
+			}
+		}
+	} else if !errors.Is(baselineErr, os.ErrNotExist) {
+		fmt.Fprintf(errOut, "verify: load scaffold baseline: %v\n", baselineErr)
+		return 1
+	}
 
 	report.Status = "pass"
 	report.NextAction = "No blockers detected."
@@ -130,6 +158,10 @@ func runVerify(args []string, out, errOut io.Writer) int {
 	if report.Status == "pass" && !report.TestSuccess {
 		report.Status = "fail"
 		report.NextAction = "Fix failing tests and rerun verify."
+	}
+	if report.Status == "pass" && !report.CanonicalChanged && len(report.ImplementationChanged) > 0 {
+		report.Status = "fail"
+		report.NextAction = "Implementation changed but canonical model files did not. Update catalog.yml/requirements.yml/design.yml/architecture.yml, regenerate ARCHITECTURE.ai.json, then rerun verify."
 	}
 
 	jsonPath := filepath.Join(".engflow/reports", "verify.json")
@@ -162,7 +194,7 @@ func parseWatchList(raw string) []string {
 		out = append(out, it)
 	}
 	if len(out) == 0 {
-		return []string{"requirements.yml", "design.yml", "ARCHITECTURE.ai.json"}
+		return []string{"catalog.yml", "requirements.yml", "design.yml", "architecture.yml", "ARCHITECTURE.ai.json"}
 	}
 	return out
 }
@@ -193,6 +225,13 @@ func renderVerifyMarkdown(r verifyReport) string {
 	fmt.Fprintf(&b, "- regen success: %t\n", r.RegenSuccess)
 	fmt.Fprintf(&b, "- architecture ai present: %t\n", r.ArchitectureAIOk)
 	fmt.Fprintf(&b, "- test success: %t\n", r.TestSuccess)
+	fmt.Fprintf(&b, "- canonical model changed from scaffold baseline: %t\n", r.CanonicalChanged)
+	if len(r.ImplementationChanged) > 0 {
+		fmt.Fprintf(&b, "- implementation files changed since scaffold baseline:\n")
+		for _, p := range r.ImplementationChanged {
+			fmt.Fprintf(&b, "  - %s\n", p)
+		}
+	}
 	if len(r.RegenChanged) > 0 {
 		fmt.Fprintf(&b, "- changed watched paths:\n")
 		for _, p := range r.RegenChanged {
