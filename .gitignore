@@ -1,0 +1,19 @@
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Go workspace artifacts
+bin/
+dist/
+tmp/
+
+# Editor/OS files
+.DS_Store
+.idea/
+.vscode/

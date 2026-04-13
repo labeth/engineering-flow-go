@@ -1,0 +1,103 @@
+system:
+  id: SYS-ENGFLOW
+  name: engflow
+  purpose: >-
+    Coordinate Spec Kit authoring, engineering-model-go artifacts, stable-ID traceability,
+    and verification into one AI-native development loop.
+requirements:
+  - id: REQ-ENGFLOW-001
+    title: Initialize projects with the intended combined workflow
+    statement: >-
+      The tool shall provide an init command that runs Spec Kit initialization by default and
+      scaffolds engflow canonical artifact files and config in one operation.
+    rationale: New projects should start in the intended Spec Kit plus engflow workflow.
+    priority: must
+
+  - id: REQ-ENGFLOW-002
+    title: Enforce canonical single-source artifact paths
+    statement: >-
+      The tool shall operate on canonical authored artifacts (`spec.md`, `requirements.yml`,
+      `design.yml`, `architecture.yml`) using config-resolved paths.
+    rationale: A single source of truth prevents duplicate or conflicting authored inputs.
+    priority: must
+
+  - id: REQ-ENGFLOW-003
+    title: Preserve stable requirement identifiers
+    statement: >-
+      The tool shall preserve canonical `REQ-*` identifier continuity and avoid silent identifier
+      reassignment in generated reports and checks.
+    rationale: Stable traceability depends on identifier continuity.
+    priority: must
+
+  - id: REQ-ENGFLOW-004
+    title: Support generation during init
+    statement: >-
+      The init workflow shall support running a configured regeneration command and validate that
+      expected output artifacts are produced.
+    rationale: Initialization should validate that the configured model generation path is usable.
+    priority: must
+
+  - id: REQ-ENGFLOW-005
+    title: Verify regeneration and test commands
+    statement: >-
+      The tool shall provide a verification command that regenerates AI artifacts, executes
+      configured tests, and emits machine-readable plus markdown reports.
+    rationale: Users need a dependable quality gate with reviewable outputs.
+    priority: must
+
+  - id: REQ-ENGFLOW-006
+    title: Detect core drift conditions
+    statement: >-
+      The drift command shall detect missing canonical inputs and stale canonical requirements
+      relative to spec updates, and classify findings by severity.
+    rationale: Early detection of misalignment reduces review and merge risk.
+    priority: must
+
+  - id: REQ-ENGFLOW-007
+    title: Detect trace coverage gaps
+    statement: >-
+      The drift workflow shall report canonical requirement IDs that lack repository evidence and
+      unknown requirement IDs referenced by tests.
+    rationale: Requirement-to-code/test linkage must be visible and auditable.
+    priority: should
+
+  - id: REQ-ENGFLOW-008
+    title: Expose operational status and next action
+    statement: >-
+      The tool shall provide a status view that summarizes completed steps, blockers, drift,
+      verification health, and the next recommended action.
+    rationale: Users need an operational cockpit, not only files.
+    priority: must
+
+  - id: REQ-ENGFLOW-009
+    title: Provide a workflow gate command
+    statement: >-
+      The tool shall provide a gate command that runs verify, drift, and status in sequence and
+      returns a failing exit code when blocking issues exist.
+    rationale: CI and local workflows need one aggregate policy entry point.
+    priority: must
+
+  - id: REQ-ENGFLOW-010
+    title: Provide trace-query command
+    statement: >-
+      The tool shall provide trace-query support that returns repository file locations for a
+      requested canonical `REQ-*` ID.
+    rationale: Engineers need fast lookup of requirement evidence during implementation and review.
+    priority: must
+
+  - id: REQ-ENGFLOW-011
+    title: Provide OpenCode-native command and skill surfaces
+    statement: >-
+      The tool shall expose status, verify, drift, trace-query, and gate capabilities through
+      OpenCode command and skill assets in addition to the standalone CLI.
+    rationale: Adoption is easier when capabilities are available directly in the coding agent.
+    priority: should
+
+  - id: REQ-ENGFLOW-012
+    title: Fail fast on missing prerequisites
+    statement: >-
+      The tool shall fail with actionable errors when required prerequisites are missing, including
+      missing Spec Kit binary for default init and missing regeneration command when output
+      generation is enabled.
+    rationale: Explicit failures prevent silent misconfiguration.
+    priority: should

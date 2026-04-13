@@ -1,0 +1,55 @@
+system:
+  id: SYS-ENGFLOW
+  name: engflow
+
+functional_units:
+  - id: FU-ENGFLOW-001
+    name: init-and-canonical-authoring-flow
+    purpose: Initialize projects and maintain single-source canonical artifacts with Spec Kit integration.
+    supports_requirements:
+      - REQ-ENGFLOW-001
+      - REQ-ENGFLOW-002
+      - REQ-ENGFLOW-003
+
+  - id: FU-ENGFLOW-002
+    name: verification-and-drift-flow
+    purpose: Provide quality gate outputs from canonical artifacts and severity-classified drift checks.
+    supports_requirements:
+      - REQ-ENGFLOW-004
+      - REQ-ENGFLOW-005
+      - REQ-ENGFLOW-006
+      - REQ-ENGFLOW-007
+      - REQ-ENGFLOW-009
+
+  - id: FU-ENGFLOW-003
+    name: status-and-trace-surface
+    purpose: Expose operational status, trace lookup, and coding-agent surfaces.
+    supports_requirements:
+      - REQ-ENGFLOW-008
+      - REQ-ENGFLOW-010
+      - REQ-ENGFLOW-011
+      - REQ-ENGFLOW-012
+
+runtime_evidence:
+  - id: RT-ENGFLOW-001
+    name: cli-workflow-runtime
+    linked_units:
+      - FU-ENGFLOW-001
+      - FU-ENGFLOW-002
+      - FU-ENGFLOW-003
+
+code_evidence:
+  - id: CODE-ENGFLOW-001
+    name: internal-engflow-cli
+    linked_runtime:
+      - RT-ENGFLOW-001
+
+verification:
+  - id: VER-ENGFLOW-001
+    name: go-test-suite
+    verifies:
+      - CODE-ENGFLOW-001
+      - REQ-ENGFLOW-005
+      - REQ-ENGFLOW-006
+      - REQ-ENGFLOW-009
+      - REQ-ENGFLOW-010

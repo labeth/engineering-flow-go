@@ -1,0 +1,25 @@
+name: engflow-engmodel-adapter
+version: 0.1
+
+inputs:
+  generate_command_env: ENGMODEL_GENERATE_CMD
+  architecture_ai_path_env: ENGMODEL_ARCH_AI_PATH
+  requirements_path_env: ENGMODEL_REQUIREMENTS_PATH
+  design_path_env: ENGMODEL_DESIGN_PATH
+
+defaults:
+  architecture_ai_path: ARCHITECTURE.ai.json
+  requirements_path: requirements.yml
+  design_path: design.yml
+
+outputs:
+  - .engflow/status/impact.json
+  - .engflow/status/impact.md
+  - .engflow/reports/verify.json
+  - .engflow/reports/drift.json
+
+checks:
+  - regenerated_artifacts_match_tracked
+  - architecture_ai_present
+  - stable_ids_in_requirements
+  - evidence_links_for_requirement_ids

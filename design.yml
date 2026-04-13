@@ -1,0 +1,106 @@
+system:
+  id: SYS-ENGFLOW
+  name: engflow
+
+architecture_style:
+  summary: "Thin orchestration layer with adapters around canonical engineering artifacts."
+  layers:
+    - name: core_engine
+      responsibilities:
+        - init scaffolding
+        - status
+        - verify
+        - drift
+        - gate
+        - trace-query
+    - name: adapter_layer
+      responsibilities:
+        - Spec Kit CLI integration
+        - engineering-model-go generation integration
+        - OpenCode command/skill surfaces
+    - name: artifact_layer
+      responsibilities:
+        - canonical authored inputs
+        - .engflow status/reports outputs
+
+canonical_artifacts:
+  - spec.md
+  - requirements.yml
+  - design.yml
+  - architecture.yml
+
+components:
+  - id: CMP-ENGFLOW-001
+    name: init_scaffold_engine
+    responsibilities:
+      - run `specify init` by default
+      - scaffold canonical files and `.engflow/config.yml`
+      - write Spec Kit template override for `REQ-*` IDs
+  - id: CMP-ENGFLOW-002
+    name: config_loader
+    responsibilities:
+      - parse `.engflow/config.yml`
+      - resolve canonical paths, repo root, and command defaults
+  - id: CMP-ENGFLOW-003
+    name: verify_engine
+    responsibilities:
+      - run regeneration command
+      - run configured tests
+      - write `.engflow/reports/verify.{json,md}`
+  - id: CMP-ENGFLOW-004
+    name: drift_analyzer
+    responsibilities:
+      - detect missing canonical inputs
+      - detect spec newer than requirements
+      - detect missing/unknown `REQ-*` evidence
+      - write `.engflow/reports/drift.{json,md}`
+  - id: CMP-ENGFLOW-005
+    name: status_engine
+    responsibilities:
+      - summarize readiness, drift, verify status
+      - write `.engflow/status/latest.{json,md}`
+  - id: CMP-ENGFLOW-006
+    name: trace_query_engine
+    responsibilities:
+      - locate repository evidence for a given `REQ-*` ID
+  - id: CMP-ENGFLOW-007
+    name: gate_orchestrator
+    responsibilities:
+      - run verify, drift, and status in sequence
+      - return aggregate pass/fail for local use and CI
+
+commands:
+  cli:
+    - engflow init
+    - engflow status --feature <id>
+    - engflow verify --feature <id>
+    - engflow drift --feature <id>
+    - engflow trace-query --id <REQ-ID>
+    - engflow gate --feature <id>
+  opencode:
+    - /engflow.status
+    - /engflow.verify
+    - /engflow.drift
+    - /engflow.trace-query
+    - /engflow.gate
+
+failure_handling:
+  principles:
+    - never overwrite authored files unexpectedly
+    - fail fast with actionable prerequisite errors
+    - keep latest reports/status snapshots for review
+    - explain blockers with stable requirement IDs when possible
+
+risks:
+  - risk: duplicate source of truth
+    mitigation:
+      - keep authored requirements in requirements.yml
+      - avoid sidecar canonical files
+  - risk: stale generated artifacts
+    mitigation:
+      - include verify + drift in gate workflow
+      - support generation during init
+  - risk: weak adoption
+    mitigation:
+      - default Spec Kit + engflow setup path
+      - provide clear next-action status

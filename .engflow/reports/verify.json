@@ -1,0 +1,12 @@
+{
+  "feature": "test-flow",
+  "generated_at": "2026-04-13T05:41:21Z",
+  "test_cmd": "go test ./...",
+  "architecture_ai": "ARCHITECTURE.ai.json",
+  "regen_success": false,
+  "architecture_ai_ok": false,
+  "test_success": true,
+  "status": "fail",
+  "next_action": "Set commands.regen in .engflow/config.yml or ENGMODEL_GENERATE_CMD, then rerun verify.",
+  "output_snippet": "?   \tengflow/cmd/engflow\t[no test files]\n?   \tengflow/internal/engflow\t[no test files]"
+}

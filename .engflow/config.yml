@@ -1,0 +1,17 @@
+# engflow project defaults
+feature: engflow-mvp
+
+paths:
+  spec: spec.md
+  requirements: requirements.yml
+  design: design.yml
+  architecture: architecture.yml
+  architecture_ai: ARCHITECTURE.ai.json
+  repo_root: .
+
+commands:
+  regen: ""
+  test: go test ./...
+
+verify:
+  watch: requirements.yml,design.yml,architecture.yml,ARCHITECTURE.ai.json

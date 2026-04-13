@@ -1,0 +1,23 @@
+name: engflow
+version: 0.1
+description: Spec Kit preset contract for engflow traceability and verification.
+
+requirements:
+  plan:
+    - include_stable_requirement_ids: true
+    - include_design_delta_section: true
+    - include_verification_strategy: true
+  tasks:
+    - each_task_references_requirement_id: true
+    - include_explicit_verification_tasks: true
+  review:
+    - run_engflow_status_before_merge: true
+    - block_on_engflow_drift_blocking: true
+
+commands:
+  pre_plan:
+    - engflow status --feature <feature-id>
+  post_implementation:
+    - engflow verify --feature <feature-id>
+    - engflow drift --feature <feature-id> --spec <spec-path> --requirements <requirements-path>
+    - engflow status --feature <feature-id>
