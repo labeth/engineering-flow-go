@@ -13,12 +13,14 @@ import (
 )
 
 type scaffoldTemplateData struct {
-	ProjectName  string
-	ProjectDir   string
-	Feature      string
-	SystemID     string
-	ProjectKey   string
-	SystemIDHint string
+	ProjectName   string
+	ProjectDir    string
+	Feature       string
+	SystemID      string
+	ProjectKey    string
+	SystemIDHint  string
+	SystemIDHint2 string
+	SystemIDHint3 string
 }
 
 type scaffoldTemplateFile struct {
@@ -74,12 +76,14 @@ func runInit(args []string, out, errOut io.Writer) int {
 	projectName := filepath.Base(targetAbs)
 	projectKey := sanitizeUpperIdentifier(projectName, 12, "PROJECT")
 	data := scaffoldTemplateData{
-		ProjectName:  projectName,
-		ProjectDir:   targetAbs,
-		Feature:      safeFeatureName(*feature),
-		SystemID:     "SYS-" + projectKey,
-		ProjectKey:   projectKey,
-		SystemIDHint: "REQ-" + projectKey + "-001",
+		ProjectName:   projectName,
+		ProjectDir:    targetAbs,
+		Feature:       safeFeatureName(*feature),
+		SystemID:      "SYS-" + projectKey,
+		ProjectKey:    projectKey,
+		SystemIDHint:  "REQ-" + projectKey + "-001",
+		SystemIDHint2: "REQ-" + projectKey + "-002",
+		SystemIDHint3: "REQ-" + projectKey + "-003",
 	}
 
 	if !*noGit {
@@ -90,11 +94,35 @@ func runInit(args []string, out, errOut io.Writer) int {
 	}
 
 	templateFiles := []scaffoldTemplateFile{
+		{Path: "README.md", Template: tmplScaffoldReadme, Mode: 0o644},
+		{Path: "package.json", Template: tmplPackageJSON, Mode: 0o644},
+		{Path: ".gitignore", Template: tmplScaffoldGitignore, Mode: 0o644},
+		{Path: "language-examples/README.md", Template: tmplLanguageExamplesReadme, Mode: 0o644},
+		{Path: "language-examples/typescript/README.md", Template: tmplTypeScriptExampleReadme, Mode: 0o644},
+		{Path: "language-examples/go/README.md", Template: tmplGoExampleReadme, Mode: 0o644},
+		{Path: "language-examples/go/scripts/verify-requirements.go", Template: tmplGoVerifyRequirementsScript, Mode: 0o644},
+		{Path: "language-examples/go/tests/validation_test.go", Template: tmplGoValidationTest, Mode: 0o644},
+		{Path: "language-examples/go/tests/api_inspect_test.go", Template: tmplGoAPIInspectTest, Mode: 0o644},
+		{Path: "language-examples/go/tests/client_deeplink_test.go", Template: tmplGoClientDeeplinkTest, Mode: 0o644},
+		{Path: "language-examples/rust/README.md", Template: tmplRustExampleReadme, Mode: 0o644},
+		{Path: "language-examples/rust/src/bin/verify_requirements.rs", Template: tmplRustVerifyRequirementsScript, Mode: 0o644},
+		{Path: "language-examples/rust/tests/validation.rs", Template: tmplRustValidationTest, Mode: 0o644},
+		{Path: "language-examples/rust/tests/api_inspect.rs", Template: tmplRustAPIInspectTest, Mode: 0o644},
+		{Path: "language-examples/rust/tests/client_deeplink.rs", Template: tmplRustClientDeeplinkTest, Mode: 0o644},
 		{Path: "spec.md", Template: tmplSpec, Mode: 0o644},
 		{Path: "catalog.yml", Template: tmplCatalog, Mode: 0o644},
 		{Path: "requirements.yml", Template: tmplRequirements, Mode: 0o644},
 		{Path: "design.yml", Template: tmplDesign, Mode: 0o644},
 		{Path: "architecture.yml", Template: tmplArchitecture, Mode: 0o644},
+		{Path: "scripts/verify-requirements.js", Template: tmplVerifyRequirementsScript, Mode: 0o755},
+		{Path: "tests/validation.test.js", Template: tmplValidationTest, Mode: 0o644},
+		{Path: "tests/api-inspect.test.js", Template: tmplAPIInspectTest, Mode: 0o644},
+		{Path: "tests/client-deeplink.test.js", Template: tmplClientDeeplinkTest, Mode: 0o644},
+		{Path: "test-results/README.md", Template: tmplTestResultsReadme, Mode: 0o644},
+		{Path: "test-results/.gitkeep", Template: "", Mode: 0o644},
+		{Path: "infra/terraform/.gitkeep", Template: "", Mode: 0o644},
+		{Path: "infra/flux/.gitkeep", Template: "", Mode: 0o644},
+		{Path: "src/.gitkeep", Template: "", Mode: 0o644},
 		{Path: ".engflow/config.yml", Template: tmplConfig, Mode: 0o644},
 		{Path: "AGENTS.md", Template: tmplAgents, Mode: 0o644},
 		{Path: ".specify/extensions.yml", Template: tmplSpecifyExtensions, Mode: 0o644},
@@ -181,7 +209,8 @@ func runInit(args []string, out, errOut io.Writer) int {
 	fmt.Fprintf(out, "  1) review .engflow/config.yml commands.regen for engineering-model generation\n")
 	fmt.Fprintf(out, "  2) edit spec.md and catalog/requirements/design/architecture artifacts\n")
 	fmt.Fprintf(out, "  3) ensure Spec Kit uses override template at .specify/templates/overrides/spec-template.md\n")
-	fmt.Fprintf(out, "  4) run: engflow gate --config .engflow/config.yml --feature %s\n", data.Feature)
+	fmt.Fprintf(out, "  4) run: npm run verify:all\n")
+	fmt.Fprintf(out, "  5) run: engflow gate --config .engflow/config.yml --feature %s\n", data.Feature)
 	return 0
 }
 
@@ -347,7 +376,14 @@ func runInitGeneration(projectRoot, regenOverride string) (string, error) {
 	if !fileExists(absAIPath) {
 		return "", fmt.Errorf("generation command succeeded but expected output was not produced: %s", aiPath)
 	}
-	return fmt.Sprintf("generated outputs:\n  - %s", aiPath), nil
+
+	adocPath := "ARCHITECTURE.adoc"
+	absAdocPath := filepath.Join(projectRoot, adocPath)
+	if !fileExists(absAdocPath) {
+		return "", fmt.Errorf("generation command succeeded but expected output was not produced: %s", adocPath)
+	}
+
+	return fmt.Sprintf("generated outputs:\n  - %s\n  - %s", aiPath, adocPath), nil
 }
 
 const tmplSpec = `# Product Spec: {{ .ProjectName }}
@@ -359,6 +395,382 @@ As a user, I want <capability> so that <outcome>.
 Acceptance criteria:
 - <criterion-1>
 - <criterion-2>
+`
+
+const tmplScaffoldReadme = `# {{ .ProjectName }}
+
+This repository was initialized with engflow init.
+
+## Default workflow
+
+Run one command for end-to-end local validation:
+
+` + "```bash" + `
+npm run verify:all
+` + "```" + `
+
+What this runs:
+1. tests + requirement verification artifacts (test-results/*.json)
+2. architecture regeneration (ARCHITECTURE.adoc + ARCHITECTURE.ai.json)
+3. engflow verify/drift/status
+4. PDF render (ARCHITECTURE.pdf)
+
+Language support:
+- TypeScript is active by default.
+- See language-examples/ for Go and Rust starter examples.
+- After choosing your language, delete the example folders you do not need.
+`
+
+const tmplPackageJSON = `{
+  "name": "{{ .ProjectName }}",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run -s arch:regen",
+    "test:node": "node --test tests/*.test.js",
+    "test:requirements": "node scripts/verify-requirements.js",
+    "test": "npm run -s test:node && npm run -s test:requirements",
+    "arch:regen": "engdoc --model architecture.yml --requirements requirements.yml --design design.yml --out ARCHITECTURE.adoc --ai-json-out ARCHITECTURE.ai.json",
+    "arch:pdf": "proven-docs render ARCHITECTURE.adoc --output ARCHITECTURE.pdf",
+    "verify:all": "bash -lc 'set -euo pipefail; npm run -s test; npm run -s arch:regen; engflow verify --config .engflow/config.yml --feature {{ .Feature }}; engflow drift --config .engflow/config.yml --feature {{ .Feature }}; engflow status --config .engflow/config.yml --feature {{ .Feature }}; npm run -s arch:pdf'"
+  }
+}
+`
+
+const tmplScaffoldGitignore = `node_modules/
+test-results/*.json
+.engflow/reports/
+.engflow/status/
+ARCHITECTURE.pdf
+`
+
+const tmplLanguageExamplesReadme = `# Language Examples
+
+This scaffold runs TypeScript/Node by default.
+
+Additional examples are provided for other supported implementation languages:
+- language-examples/typescript
+- language-examples/go
+- language-examples/rust
+
+Intended usage:
+1. Pick one language path.
+2. Move/copy the pieces you need into the repo root workflow.
+3. Delete the language examples you do not need.
+
+Keep requirement traceability and verification artifact shape aligned with test-results/README.md.
+`
+
+const tmplTypeScriptExampleReadme = `# TypeScript Example
+
+TypeScript is the default active scaffold.
+
+Primary commands are already configured in package.json:
+- npm test
+- npm run arch:regen
+- npm run arch:pdf
+- npm run verify:all
+`
+
+const tmplGoExampleReadme = `# Go Example
+
+Suggested root command mapping if you switch this repository to Go:
+
+commands:
+  test: "go test ./... && go run ./scripts/verify-requirements.go"
+  regen: "engdoc --model architecture.yml --requirements requirements.yml --design design.yml --out ARCHITECTURE.adoc --ai-json-out ARCHITECTURE.ai.json"
+
+Use scripts/verify-requirements.go and tests/*.go as starter examples.
+`
+
+const tmplGoVerifyRequirementsScript = `package main
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"time"
+)
+
+type result struct {
+	Requirement string ` + "`json:\"requirement\"`" + `
+	Status      string ` + "`json:\"status\"`" + `
+	Notes       string ` + "`json:\"notes,omitempty\"`" + `
+}
+
+type payload struct {
+	GeneratedAt string   ` + "`json:\"generatedAt\"`" + `
+	Suite       string   ` + "`json:\"suite\"`" + `
+	Description string   ` + "`json:\"engmodel.verification.description\"`" + `
+	Results     []result ` + "`json:\"results\"`" + `
+}
+
+func write(name, suite, desc, reqID string) error {
+	p := payload{
+		GeneratedAt: time.Now().UTC().Format(time.RFC3339Nano),
+		Suite:       suite,
+		Description: desc,
+		Results: []result{
+			{Requirement: reqID, Status: "pass", Notes: "starter Go verification artifact"},
+		},
+	}
+	b, err := json.MarshalIndent(p, "", "  ")
+	if err != nil {
+		return err
+	}
+	b = append(b, '\n')
+	return os.WriteFile(filepath.Join("test-results", name), b, 0o644)
+}
+
+func main() {
+	_ = os.MkdirAll("test-results", 0o755)
+	if err := write("validation.json", "validation", "Validates canonical requirement path in Go test flow.", "{{ .SystemIDHint }}"); err != nil {
+		panic(err)
+	}
+	if err := write("api-inspect.json", "api-inspect", "Validates API inspection behavior in Go test flow.", "{{ .SystemIDHint2 }}"); err != nil {
+		panic(err)
+	}
+	if err := write("client-deeplink.json", "client-deeplink", "Validates deeplink behavior in Go test flow.", "{{ .SystemIDHint3 }}"); err != nil {
+		panic(err)
+	}
+}
+`
+
+const tmplGoValidationTest = `package tests
+
+// ENGMODEL-OWNER-UNIT: FU-{{ .ProjectKey }}-CORE
+// TRACE-REQS: {{ .SystemIDHint }}
+// ENGMODEL-VERIFICATION-DESCRIPTION: validates canonical requirement IDs and EARS-friendly seed wording
+`
+
+const tmplGoAPIInspectTest = `package tests
+
+// ENGMODEL-OWNER-UNIT: FU-{{ .ProjectKey }}-CORE
+// TRACE-REQS: {{ .SystemIDHint2 }}
+// ENGMODEL-VERIFICATION-DESCRIPTION: validates authored architecture interaction and dependency mappings are present
+`
+
+const tmplGoClientDeeplinkTest = `package tests
+
+// ENGMODEL-OWNER-UNIT: FU-{{ .ProjectKey }}-CORE
+// TRACE-REQS: {{ .SystemIDHint3 }}
+// ENGMODEL-VERIFICATION-DESCRIPTION: validates spec template enforces REQ single-source traceability
+`
+
+const tmplRustExampleReadme = `# Rust Example
+
+Suggested root command mapping if you switch this repository to Rust:
+
+commands:
+  test: "cargo test && cargo run --bin verify_requirements"
+  regen: "engdoc --model architecture.yml --requirements requirements.yml --design design.yml --out ARCHITECTURE.adoc --ai-json-out ARCHITECTURE.ai.json"
+
+Use src/bin/verify_requirements.rs and tests/*.rs as starter examples.
+`
+
+const tmplRustVerifyRequirementsScript = `use std::fs;
+use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+fn write(name: &str, suite: &str, description: &str, req: &str) {
+    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let body = [
+        "{".to_string(),
+        format!("  \"generatedAt\": \"{}\",", ts),
+        format!("  \"suite\": \"{}\",", suite),
+        format!("  \"engmodel.verification.description\": \"{}\",", description),
+        "  \"results\": [".to_string(),
+        String::from("    {\"requirement\": \"") + req + "\", \"status\": \"pass\", \"notes\": \"starter Rust verification artifact\"}",
+        "  ]".to_string(),
+        "}".to_string(),
+        "".to_string(),
+    ].join("\n");
+    fs::write(Path::new("test-results").join(name), body).unwrap();
+}
+
+fn main() {
+    fs::create_dir_all("test-results").unwrap();
+    write("validation.json", "validation", "Validates canonical requirement path in Rust test flow.", "{{ .SystemIDHint }}");
+    write("api-inspect.json", "api-inspect", "Validates API inspection behavior in Rust test flow.", "{{ .SystemIDHint2 }}");
+    write("client-deeplink.json", "client-deeplink", "Validates deeplink behavior in Rust test flow.", "{{ .SystemIDHint3 }}");
+}
+`
+
+const tmplRustValidationTest = `// ENGMODEL-OWNER-UNIT: FU-{{ .ProjectKey }}-CORE
+// TRACE-REQS: {{ .SystemIDHint }}
+// ENGMODEL-VERIFICATION-DESCRIPTION: validates canonical requirement IDs and EARS-friendly seed wording
+`
+
+const tmplRustAPIInspectTest = `// ENGMODEL-OWNER-UNIT: FU-{{ .ProjectKey }}-CORE
+// TRACE-REQS: {{ .SystemIDHint2 }}
+// ENGMODEL-VERIFICATION-DESCRIPTION: validates authored architecture interaction and dependency mappings are present
+`
+
+const tmplRustClientDeeplinkTest = `// ENGMODEL-OWNER-UNIT: FU-{{ .ProjectKey }}-CORE
+// TRACE-REQS: {{ .SystemIDHint3 }}
+// ENGMODEL-VERIFICATION-DESCRIPTION: validates spec template enforces REQ single-source traceability
+`
+
+const tmplVerifyRequirementsScript = `#!/usr/bin/env node
+const fs = require("fs");
+const path = require("path");
+
+const repoRoot = process.cwd();
+const outDir = path.join(repoRoot, "test-results");
+fs.mkdirSync(outDir, { recursive: true });
+
+function readText(relPath) {
+  const abs = path.join(repoRoot, relPath);
+  return fs.existsSync(abs) ? fs.readFileSync(abs, "utf8") : "";
+}
+
+function writeSuiteArtifact(fileName, suiteName, description, results) {
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    suite: suiteName,
+    "engmodel.verification.description": description,
+    results,
+  };
+  fs.writeFileSync(path.join(outDir, fileName), JSON.stringify(payload, null, 2) + "\n");
+}
+
+function suiteStatus(ok) {
+  return ok ? "pass" : "fail";
+}
+
+const requirements = readText("requirements.yml");
+const architecture = readText("architecture.yml");
+const template = readText(".specify/templates/spec-template.md");
+
+const validationOK =
+  requirements.includes("{{ .SystemIDHint }}") &&
+  requirements.includes("{{ .SystemIDHint2 }}") &&
+  requirements.includes("{{ .SystemIDHint3 }}");
+
+const apiInspectOK =
+  architecture.includes("baseCatalogRef: ./catalog.yml") &&
+  architecture.includes("type: interacts_with") &&
+  architecture.includes("type: depends_on");
+
+const clientDeeplinkOK =
+  template.includes("single source: REQ IDs") &&
+  !template.includes("**FR-001**");
+
+writeSuiteArtifact(
+  "validation.json",
+  "validation",
+  "Validates scaffolded requirement IDs and baseline model inputs.",
+  [
+    {
+      requirement: "{{ .SystemIDHint }}",
+      status: suiteStatus(validationOK),
+      notes: validationOK ? "Canonical requirement IDs are present." : "Missing one or more canonical REQ IDs.",
+    },
+  ]
+);
+
+writeSuiteArtifact(
+  "api-inspect.json",
+  "api-inspect",
+  "Validates authored architecture contains baseline interaction and dependency mappings.",
+  [
+    {
+      requirement: "{{ .SystemIDHint2 }}",
+      status: suiteStatus(apiInspectOK),
+      notes: apiInspectOK ? "Architecture mapping baseline looks valid." : "Missing expected authored architecture mapping entries.",
+    },
+  ]
+);
+
+writeSuiteArtifact(
+  "client-deeplink.json",
+  "client-deeplink",
+  "Validates Speckit spec template is requirement-driven and FR defaults are removed.",
+  [
+    {
+      requirement: "{{ .SystemIDHint3 }}",
+      status: suiteStatus(clientDeeplinkOK),
+      notes: clientDeeplinkOK ? "Spec template enforces REQ single-source flow." : "Spec template still contains FR defaults or missing REQ guidance.",
+    },
+  ]
+);
+
+if (!(validationOK && apiInspectOK && clientDeeplinkOK)) {
+  process.exit(1);
+}
+`
+
+const tmplValidationTest = `// ENGMODEL-OWNER-UNIT: FU-{{ .ProjectKey }}-CORE
+// TRACE-REQS: {{ .SystemIDHint }}
+// ENGMODEL-VERIFICATION-DESCRIPTION: validates canonical requirement IDs and EARS-friendly seed wording
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+test("primary requirement is present and EARS-friendly", () => {
+  const text = fs.readFileSync("requirements.yml", "utf8");
+  assert.ok(text.includes("{{ .SystemIDHint }}"));
+  assert.ok(text.includes("shall validate the request payload."));
+});
+`
+
+const tmplAPIInspectTest = `// ENGMODEL-OWNER-UNIT: FU-{{ .ProjectKey }}-CORE
+// TRACE-REQS: {{ .SystemIDHint2 }}
+// ENGMODEL-VERIFICATION-DESCRIPTION: validates authored architecture interaction and dependency mappings are present
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+test("architecture includes interaction and dependency mappings", () => {
+  const text = fs.readFileSync("architecture.yml", "utf8");
+  assert.ok(text.includes("type: interacts_with"));
+  assert.ok(text.includes("type: depends_on"));
+  assert.ok(fs.readFileSync("requirements.yml", "utf8").includes("{{ .SystemIDHint2 }}"));
+});
+`
+
+const tmplClientDeeplinkTest = `// ENGMODEL-OWNER-UNIT: FU-{{ .ProjectKey }}-CORE
+// TRACE-REQS: {{ .SystemIDHint3 }}
+// ENGMODEL-VERIFICATION-DESCRIPTION: validates spec template enforces REQ single-source traceability
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+test("spec template is requirement-driven", () => {
+  const text = fs.readFileSync(".specify/templates/spec-template.md", "utf8");
+  assert.ok(text.includes("single source: REQ IDs"));
+  assert.ok(!text.includes("**FR-001**"));
+  assert.ok(fs.readFileSync("requirements.yml", "utf8").includes("{{ .SystemIDHint3 }}"));
+});
+`
+
+const tmplTestResultsReadme = `# test-results
+
+Generated verification artifacts used by engineering-model-go inference.
+
+Files in this directory should be produced by executed test/verification commands,
+not manually authored reports.
+
+Canonical JSON shape:
+
+` + "```json" + `
+{
+  "generatedAt": "ISO timestamp",
+  "suite": "string",
+  "engmodel.verification.description": "string",
+  "results": [
+    {
+      "requirement": "REQ-...",
+      "status": "pass|fail|partial|blocked|not-run|flaky",
+      "notes": "optional human-readable note"
+    }
+  ]
+}
+` + "```" + `
 `
 
 const tmplCatalog = `catalog:
@@ -443,8 +855,18 @@ const tmplRequirements = `lintRun:
 
 requirements:
   - id: {{ .SystemIDHint }}
-    text: "When initial request is received, the {{ .ProjectName }} system shall execute core flow."
-    notes: "Initial end-to-end requirement tied to scaffolded catalog terms."
+    text: "When initial request is received, the {{ .ProjectName }} system shall validate the request payload."
+    notes: "Validation path requirement for the initial verification suite."
+    appliesTo:
+      - FU-{{ .ProjectKey }}-CORE
+  - id: {{ .SystemIDHint2 }}
+    text: "When initial request is received, the {{ .ProjectName }} system shall expose inspection metadata for the request path."
+    notes: "Inspection behavior requirement for API-facing verification."
+    appliesTo:
+      - FU-{{ .ProjectKey }}-CORE
+  - id: {{ .SystemIDHint3 }}
+    text: "When initial request is received, the {{ .ProjectName }} system shall preserve deep-link context for the request trace."
+    notes: "Client behavior requirement for deeplink verification."
     appliesTo:
       - FU-{{ .ProjectKey }}-CORE
 `
@@ -565,11 +987,11 @@ paths:
 
 commands:
   # Required for enforced verify/gate flow.
-  regen: "engdoc --model architecture.yml --requirements requirements.yml --design design.yml --ai-json-out ARCHITECTURE.ai.json"
-  test: ""
+  regen: "npm run -s arch:regen"
+  test: "npm test"
 
 verify:
-  watch: catalog.yml,requirements.yml,design.yml,architecture.yml,ARCHITECTURE.ai.json
+  watch: catalog.yml,requirements.yml,design.yml,architecture.yml,ARCHITECTURE.ai.json,ARCHITECTURE.adoc
 `
 
 const tmplGateWorkflow = `name: engflow-gate
@@ -592,8 +1014,17 @@ jobs:
             exit 1
           fi
 
-      - name: Run engflow gate
-        run: engflow gate --config .engflow/config.yml --feature {{ .Feature }}
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Run full local workflow
+        run: npm run verify:all
+
+      - name: Check generated artifacts are up to date
+        run: |
+          git diff --exit-code -- ARCHITECTURE.ai.json ARCHITECTURE.adoc
+          test -f ARCHITECTURE.pdf
+          test ARCHITECTURE.pdf -nt ARCHITECTURE.adoc
 `
 
 const tmplAgents = `# AGENTS.md
@@ -619,6 +1050,7 @@ Rules:
   - New implementation code MUST use one of: Go, Rust, TypeScript.
   - Python and other runtimes MUST NOT be used for new implementation code unless the user explicitly requests an exception in the current conversation.
   - If language is ambiguous, default MUST be TypeScript.
+  - language-examples/{typescript,go,rust} are scaffolded references; choose one path and remove unused examples.
 - Deployment stack hard gate:
   - Deployment/infrastructure work MUST use Terraform + Flux unless the user explicitly requests an exception in the current conversation.
 - Speckit lifecycle is mandatory for non-trivial feature work:
@@ -670,6 +1102,7 @@ Quick commands:
 - /speckit.tasks
 - /speckit.implement
 - /engmod.generate
+- npm run verify:all
 - engflow gate --config .engflow/config.yml --feature {{ .Feature }}
 <!-- ENGFLOW:END -->
 `
@@ -892,8 +1325,9 @@ Run engineering-model-go generation using project configuration.
 2. If no command is configured, stop with an actionable error.
 3. Run the generation command from the repository root.
 4. Verify ARCHITECTURE.ai.json exists after generation.
-5. Treat ARCHITECTURE.ai.json as generated-only; do not manually edit it.
-6. If generation fails, stop and fix generation before architecture-dependent implementation work.
+5. Verify ARCHITECTURE.adoc exists after generation.
+6. Treat ARCHITECTURE.ai.json as generated-only; do not manually edit it.
+7. If generation fails, stop and fix generation before architecture-dependent implementation work.
 `
 
 const tmplOpenCodeEngmodReqText = `# /engmod.req-text

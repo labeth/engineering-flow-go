@@ -67,11 +67,11 @@ All commands:
 
 Examples:
   engflow init --project-dir ../my-project --feature initial-feature
-  engflow init --project-dir ../my-project --feature initial-feature --regen-cmd "make engmodel-generate"
+  engflow init --project-dir ../my-project --feature initial-feature --regen-cmd "npm run -s arch:regen"
   engflow init --project-dir ../my-project --feature initial-feature --no-speckit-init --no-generate-outputs
   engflow gate --feature auth-login --config .engflow/config.yml
   engflow trace-query --id REQ-AUTH-001
   engflow status --feature auth-login --config .engflow/config.yml
-  engflow verify --feature auth-login --regen-cmd "make ai-gen" --test-cmd "go test ./..."
+  engflow verify --feature auth-login --regen-cmd "npm run -s arch:regen" --test-cmd "npm test"
 `)
 }

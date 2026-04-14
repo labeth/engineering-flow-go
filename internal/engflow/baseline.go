@@ -30,7 +30,7 @@ func writeScaffoldBaseline(repoRoot string, cfg runConfig, force bool) error {
 		return err
 	}
 	payload := scaffoldBaseline{
-		CreatedAt:       nowRFC3339(),
+		CreatedAt:       time.Now().UTC().Format(time.RFC3339Nano),
 		CanonicalHashes: hashes,
 	}
 	return writeJSON(path, payload)

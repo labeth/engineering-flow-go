@@ -61,6 +61,13 @@ func runVerify(args []string, out, errOut io.Writer) int {
 	}
 
 	watchPaths := parseWatchList(*watch)
+	expectAdoc := false
+	for _, p := range watchPaths {
+		if strings.EqualFold(filepath.Base(strings.TrimSpace(p)), "ARCHITECTURE.adoc") {
+			expectAdoc = true
+			break
+		}
+	}
 	before, err := snapshotPaths(watchPaths)
 	if err != nil {
 		fmt.Fprintf(errOut, "verify: snapshot before: %v\n", err)
@@ -79,6 +86,15 @@ func runVerify(args []string, out, errOut io.Writer) int {
 		CanonicalChanged: true,
 	}
 	combinedOutput := make([]string, 0, 2)
+
+	if strings.TrimSpace(*testCmd) != "" {
+		report.TestSuccess = false
+		output, err := runShell(*testCmd)
+		combinedOutput = append(combinedOutput, trimOutput(output, 2000))
+		if err == nil {
+			report.TestSuccess = true
+		}
+	}
 
 	if resolvedRegenCmd != "" {
 		output, err := runShell(resolvedRegenCmd)
@@ -100,15 +116,6 @@ func runVerify(args []string, out, errOut io.Writer) int {
 		report.ArchitectureAIOk = true
 	}
 
-	if strings.TrimSpace(*testCmd) != "" {
-		report.TestSuccess = false
-		output, err := runShell(*testCmd)
-		combinedOutput = append(combinedOutput, trimOutput(output, 2000))
-		if err == nil {
-			report.TestSuccess = true
-		}
-	}
-
 	if len(combinedOutput) > 0 {
 		report.OutputSnippet = strings.Join(combinedOutput, "\n\n")
 	}
@@ -121,7 +128,7 @@ func runVerify(args []string, out, errOut io.Writer) int {
 		}
 		report.CanonicalChanged = canonicalHashesChanged(baseline.CanonicalHashes, currentCanonical)
 		if !report.CanonicalChanged {
-			since, err := time.Parse(time.RFC3339, baseline.CreatedAt)
+			since, err := parseBaselineTime(baseline.CreatedAt)
 			if err == nil {
 				changedImpl, err := collectImplementationFilesChangedSince(cfg.RepoRoot, since, canonicalInputPaths(cfg))
 				if err != nil {
@@ -154,6 +161,10 @@ func runVerify(args []string, out, errOut io.Writer) int {
 			report.Status = "fail"
 			report.NextAction = fmt.Sprintf("Run regeneration and ensure %s is produced.", archAIPath)
 		}
+		if report.RegenSuccess && expectAdoc && !fileExists("ARCHITECTURE.adoc") {
+			report.Status = "fail"
+			report.NextAction = "Run regeneration and ensure ARCHITECTURE.adoc is produced."
+		}
 	}
 	if report.Status == "pass" && !report.TestSuccess {
 		report.Status = "fail"
@@ -183,6 +194,17 @@ func runVerify(args []string, out, errOut io.Writer) int {
 	return 0
 }
 
+func parseBaselineTime(raw string) (time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}, fmt.Errorf("empty baseline timestamp")
+	}
+	if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+		return t, nil
+	}
+	return time.Parse(time.RFC3339, raw)
+}
+
 func parseWatchList(raw string) []string {
 	items := strings.Split(raw, ",")
 	out := make([]string, 0, len(items))
@@ -194,7 +216,7 @@ func parseWatchList(raw string) []string {
 		out = append(out, it)
 	}
 	if len(out) == 0 {
-		return []string{"catalog.yml", "requirements.yml", "design.yml", "architecture.yml", "ARCHITECTURE.ai.json"}
+		return []string{"catalog.yml", "requirements.yml", "design.yml", "architecture.yml", "ARCHITECTURE.ai.json", "ARCHITECTURE.adoc"}
 	}
 	return out
 }

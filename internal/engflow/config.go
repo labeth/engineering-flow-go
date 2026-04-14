@@ -34,7 +34,7 @@ func defaultRunConfig() runConfig {
 		RegenCmd:         "",
 		TestCmd:          "",
 	}
-	cfg.WatchPaths = []string{cfg.CatalogPath, cfg.RequirementsPath, cfg.DesignPath, cfg.ArchitecturePath, cfg.ArchitectureAI}
+	cfg.WatchPaths = []string{cfg.CatalogPath, cfg.RequirementsPath, cfg.DesignPath, cfg.ArchitecturePath, cfg.ArchitectureAI, "ARCHITECTURE.adoc"}
 	return cfg
 }
 
@@ -102,7 +102,7 @@ func loadRunConfig(path string) (runConfig, error) {
 	cfg.ArchitectureAI = firstNonEmpty(cfg.ArchitectureAI, "ARCHITECTURE.ai.json")
 	cfg.RepoRoot = firstNonEmpty(cfg.RepoRoot, ".")
 	if len(cfg.WatchPaths) == 0 {
-		cfg.WatchPaths = []string{cfg.CatalogPath, cfg.RequirementsPath, cfg.DesignPath, cfg.ArchitecturePath, cfg.ArchitectureAI}
+		cfg.WatchPaths = []string{cfg.CatalogPath, cfg.RequirementsPath, cfg.DesignPath, cfg.ArchitecturePath, cfg.ArchitectureAI, "ARCHITECTURE.adoc"}
 	}
 
 	return cfg, nil

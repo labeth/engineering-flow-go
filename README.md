@@ -44,10 +44,10 @@ paths:
   architecture: architecture.yml
   architecture_ai: ARCHITECTURE.ai.json
 commands:
-  regen: engdoc --model architecture.yml --requirements requirements.yml --design design.yml --ai-json-out ARCHITECTURE.ai.json
-  test: go test ./...
+  regen: npm run -s arch:regen
+  test: npm test
 verify:
-  watch: catalog.yml,requirements.yml,design.yml,architecture.yml,ARCHITECTURE.ai.json
+  watch: catalog.yml,requirements.yml,design.yml,architecture.yml,ARCHITECTURE.ai.json,ARCHITECTURE.adoc
 ```
 
 ## Commands
@@ -99,8 +99,10 @@ See `integrations/speckit/` for:
 How engflow extends Spec Kit:
 
 - `engflow init` runs `specify init` by default.
-- engflow writes `.specify/templates/overrides/spec-template.md`.
-- The override enforces `REQ-*` IDs and replaces default Spec Kit `FR-*` requirement ID usage in this flow.
+- engflow enforces the REQ template in both:
+  - `.specify/templates/spec-template.md`
+  - `.specify/templates/overrides/spec-template.md`
+- This replaces default Spec Kit `FR-*` requirement ID usage in this flow.
 - Canonical engineering inputs are authored in `catalog.yml`, `requirements.yml`, `design.yml`, and `architecture.yml`.
 
 This is currently an integration package/extension, not a released upstream Spec Kit plugin.
@@ -114,7 +116,7 @@ engflow gate --feature <feature-id> --config .engflow/config.yml
 ```
 
 It runs `verify`, `drift`, and `status` in sequence.
-Because `verify` runs `commands.regen`, this gate includes engdoc-based regeneration of `ARCHITECTURE.ai.json`.
+`verify` runs `commands.test` before regeneration, so engdoc consumes fresh executed test artifacts from `test-results/`.
 
 Enforced behavior:
 - `verify`/`gate` require engineering-model regeneration to be configured (`commands.regen` or `ENGMODEL_GENERATE_CMD`).
@@ -155,11 +157,20 @@ engflow init --project-dir /path/to/new-project --feature initial-feature
 
 This creates:
 
+- `README.md`
+- `package.json`
+- `.gitignore`
+- `language-examples/{typescript,go,rust}/`
 - `spec.md`
 - `catalog.yml`
 - `requirements.yml`
 - `design.yml`
 - `architecture.yml`
+- `scripts/verify-requirements.js`
+- `tests/*.test.js`
+- `test-results/README.md`
+- `infra/terraform/.gitkeep`
+- `infra/flux/.gitkeep`
 - `.engflow/config.yml`
 - `AGENTS.md` (engflow default instructions section)
 - `.specify/extensions.yml` (engflow-enforced hook wiring template)
@@ -168,13 +179,25 @@ This creates:
 - `.opencode/command/engflow.{status,verify,drift,gate,trace-query}.md`
 - `.opencode/command/engmod.{generate,req-text,paths}.md`
 
-By default, `.engflow/config.yml` sets `commands.regen` to:
+By default, scaffold scripts include:
 
 ```bash
-engdoc --model architecture.yml --requirements requirements.yml --design design.yml --ai-json-out ARCHITECTURE.ai.json
+npm test
+npm run arch:regen
+npm run arch:pdf
+npm run verify:all
 ```
 
-so init can generate `ARCHITECTURE.ai.json` immediately.
+`verify:all` is the canonical one-command local workflow:
+1. run tests and emit `test-results/*.json`
+2. regenerate `ARCHITECTURE.adoc` + `ARCHITECTURE.ai.json`
+3. run `engflow verify` + `engflow drift` + `engflow status`
+4. render `ARCHITECTURE.pdf`
+
+Language examples:
+- TypeScript is the active default scaffold.
+- `language-examples/go` and `language-examples/rust` provide starter equivalents you can adopt.
+- After selecting your stack, remove example folders you do not need.
 
 Default behavior includes Spec Kit init and requires `specify` installed.
 If you need to scaffold without Spec Kit:
