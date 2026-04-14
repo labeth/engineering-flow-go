@@ -625,13 +625,23 @@ Rules:
   1. /speckit.specify
   2. /speckit.plan
   3. /speckit.tasks
-  4. /speckit.implement
+  4. Update canonical model files for the feature (catalog.yml, requirements.yml, design.yml, architecture.yml).
+  5. /engmod.generate (pre-implementation regeneration; must refresh ARCHITECTURE.ai.json using engdoc).
+  6. /speckit.implement (implementation happens here, after model updates and pre-regeneration).
+  7. /engmod.generate (final regeneration after implementation).
+  8. engflow gate --config .engflow/config.yml --feature {{ .Feature }}
+- Treat implementation as incomplete until steps 7 and 8 pass.
 - The agent MUST NOT skip Speckit lifecycle steps unless user explicitly says "skip speckit workflow".
 - Engflow checkpoints are mandatory through .specify/extensions.yml hooks
 - Engflow quality gate order: verify -> drift -> status (or gate)
 - Keep REQ-* identifiers stable; do not silently rename accepted IDs
 - Add REQ-* references in code/tests/verification artifacts for traceability
 - verify/gate must fail if commands.regen is missing or ARCHITECTURE.ai.json is missing
+- Manual test-result documents are forbidden.
+- Do not create ad-hoc files like test-results.md, verification-notes.md, qa-report.md, or docs/test-results/*.
+- Test evidence must come from command output and generated reports only:
+  - .engflow/reports/verify.{md,json}
+  - .engflow/reports/drift.{md,json}
 
 Preflight output (must appear before edits):
 - Selected language/runtime

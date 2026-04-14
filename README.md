@@ -114,12 +114,14 @@ engflow gate --feature <feature-id> --config .engflow/config.yml
 ```
 
 It runs `verify`, `drift`, and `status` in sequence.
+Because `verify` runs `commands.regen`, this gate includes engdoc-based regeneration of `ARCHITECTURE.ai.json`.
 
 Enforced behavior:
 - `verify`/`gate` require engineering-model regeneration to be configured (`commands.regen` or `ENGMODEL_GENERATE_CMD`).
 - `verify`/`gate` fail if `ARCHITECTURE.ai.json` is not present after regeneration.
 - `init` writes `.engflow/state/scaffold-baseline.json` with canonical model hashes.
 - `verify`/`gate` fail when implementation files changed since scaffold baseline but canonical model files (`catalog.yml`, `requirements.yml`, `design.yml`, `architecture.yml`) remain unchanged.
+- Manual test-result documents are not allowed; use command output plus generated `.engflow/reports/verify.{md,json}` and `.engflow/reports/drift.{md,json}`.
 
 ## Architecture Root Of Trust
 
@@ -127,6 +129,17 @@ Enforced behavior:
 - `ARCHITECTURE.ai.json` is generated output and must not be edited by hand.
 - After changes to `catalog.yml`, `requirements.yml`, `design.yml`, or `architecture.yml`, run regeneration before architecture-dependent planning/implementation.
 - If regeneration fails, treat architecture context as untrusted until generation succeeds.
+- For feature completion, run `/engmod.generate` and then `engflow gate`; do not consider implementation complete until both pass.
+
+Required execution order for non-trivial feature delivery:
+1. `/speckit.specify`
+2. `/speckit.plan`
+3. `/speckit.tasks`
+4. Update canonical model files (`catalog.yml`, `requirements.yml`, `design.yml`, `architecture.yml`)
+5. `/engmod.generate` (pre-implementation regeneration)
+6. `/speckit.implement` (implementation stage)
+7. `/engmod.generate` (final regeneration after implementation)
+8. `engflow gate --config .engflow/config.yml --feature <feature-id>`
 
 GitHub Actions gate is defined in:
 
